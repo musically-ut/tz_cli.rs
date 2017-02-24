@@ -1,5 +1,14 @@
 use std::env;
 use std::path::PathBuf;
+use std::io;
+use std::fs::File;
+use std::io::{BufReader, BufRead, Error, ErrorKind};
+
+extern crate chrono;
+extern crate chrono_tz;
+
+use chrono::TimeZone;
+use chrono_tz::Tz;
 
 fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> Result<PathBuf, String> {
     if args.len() > 1 {
@@ -16,11 +25,36 @@ fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> Resu
     }
 }
 
+fn read_file(conf_file: PathBuf) -> Result<Vec<Tz>, io::Error> {
+    let mut tzs : Vec<Tz> = Vec::new();
+    let f = try!(File::open(conf_file.to_str().unwrap()));
+    let file_buffer = BufReader::new(&f);
+    for tz_name_line in file_buffer.lines() {
+        let tz_name = tz_name_line.unwrap();
+        match tz_name.parse() {
+            Ok(tz) => tzs.push(tz),
+            Err(why) =>
+                return Err(
+                    Error::new(ErrorKind::InvalidData,
+                               format!("Parsing error with: {}, {}",
+                                       tz_name, why))
+                ),
+        }
+    }
+    Ok(tzs)
+}
+
 fn main() {
     let opt_home = env::home_dir();
     let args = env::args().collect::<Vec<String>>();
     match get_tz_file(&args, &opt_home) {
-        Ok(conf_file) => println!("{} {}", "tz-file:", conf_file.to_str().unwrap()),
-        Err(err_str) => println!("Unable to retrieve name of config file:\n{}.", err_str)
+        Ok(conf_file) => {
+            println!("{} {}", "tz-file:", conf_file.to_str().unwrap());
+            match read_file(conf_file) {
+                Ok(tzs) => println!("Timezones: {:?}", tzs),
+                Err(why) => println!("Failed to read file: {}", why)
+            }
+        },
+        Err(why) => println!("Unable to retrieve name of config file:\n{}.", why)
     }
 }
