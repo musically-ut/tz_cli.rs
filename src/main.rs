@@ -50,16 +50,17 @@ pub fn read_file(conf_file: PathBuf) -> Result<Vec<Tz>, io::Error> {
 fn main() {
     let opt_home = env::home_dir();
     let args = env::args().collect::<Vec<String>>();
+    let time_fmt = "%Y-%m-%d %H:%M %Z";
     match get_tz_file(&args, &opt_home) {
         Ok(conf_file) => {
             match read_file(conf_file) {
                 Ok(tzs) => {
                     let local_time = Local::now();
-                    println!("Local time\t=\t{:?}", local_time);
+                    println!("Local time\t= {}", local_time.format(time_fmt));
                     for tz in tzs {
-                        println!("{:?}\t=\t{:?}", 
+                        println!("{:?}\t= {}", 
                                  tz,
-                                 local_time.with_timezone(&tz))
+                                 local_time.with_timezone(&tz).format(time_fmt))
                     }
                 },
                 Err(why) => println!("Failed to read file: {}", why)
