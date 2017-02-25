@@ -7,7 +7,7 @@ use std::io::{BufReader, BufRead, Error, ErrorKind};
 extern crate chrono;
 extern crate chrono_tz;
 
-// use chrono::TimeZone;
+use chrono::Local;
 use chrono_tz::Tz;
 
 /// The function takes arguments passed to the program and an optional path to $HOME
@@ -52,9 +52,16 @@ fn main() {
     let args = env::args().collect::<Vec<String>>();
     match get_tz_file(&args, &opt_home) {
         Ok(conf_file) => {
-            println!("{} {}", "tz-file:", conf_file.to_str().unwrap());
             match read_file(conf_file) {
-                Ok(tzs) => println!("Timezones: {:?}", tzs),
+                Ok(tzs) => {
+                    let local_time = Local::now();
+                    println!("Local time\t=\t{:?}", local_time);
+                    for tz in tzs {
+                        println!("{:?}\t=\t{:?}", 
+                                 tz,
+                                 local_time.with_timezone(&tz))
+                    }
+                },
                 Err(why) => println!("Failed to read file: {}", why)
             }
         },
