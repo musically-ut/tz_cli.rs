@@ -7,10 +7,12 @@ use std::io::{BufReader, BufRead, Error, ErrorKind};
 extern crate chrono;
 extern crate chrono_tz;
 
-use chrono::TimeZone;
+// use chrono::TimeZone;
 use chrono_tz::Tz;
 
-fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> Result<PathBuf, String> {
+/// The function takes arguments passed to the program and an optional path to $HOME
+/// and returns the location of the config file to read the timezones from.
+pub fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> Result<PathBuf, String> {
     if args.len() > 1 {
         return Ok(PathBuf::from(&args[1]));
     } else {
@@ -25,7 +27,8 @@ fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> Resu
     }
 }
 
-fn read_file(conf_file: PathBuf) -> Result<Vec<Tz>, io::Error> {
+/// Reads the config file and returns a vector of parsed timezones or an io::error.
+pub fn read_file(conf_file: PathBuf) -> Result<Vec<Tz>, io::Error> {
     let mut tzs : Vec<Tz> = Vec::new();
     let f = try!(File::open(conf_file.to_str().unwrap()));
     let file_buffer = BufReader::new(&f);
@@ -56,5 +59,32 @@ fn main() {
             }
         },
         Err(why) => println!("Unable to retrieve name of config file:\n{}.", why)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use chrono_tz::Asia::Kolkata;
+
+    #[test]
+    fn test_get_tz_file() {
+        let conf = "/tmp/test.conf".to_string();
+        let prog = "prog_name".to_string();
+        let args = vec![prog, conf];
+        assert_eq!(get_tz_file(&args, &None).unwrap().to_str().unwrap(), args[1])
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_read_file_not_found() {
+        read_file(PathBuf::from("./test-data/non-existent.conf")).unwrap();
+    }
+
+    #[test]
+    fn test_read_file() {
+        assert_eq!(read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0],
+                   Kolkata)
     }
 }
