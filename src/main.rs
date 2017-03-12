@@ -29,7 +29,7 @@ pub fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> 
 }
 
 /// Reads the config file and returns a vector of parsed timezones or an io::error.
-pub fn read_file(conf_file: PathBuf) -> Result<Vec<(String, Tz)>, io::Error> {
+pub fn read_file(conf_file: &PathBuf) -> Result<Vec<(String, Tz)>, io::Error> {
     let mut tzs : Vec<(String, Tz)> = Vec::new();
     let f = try!(File::open(conf_file.to_str().unwrap()));
     let file_buffer = BufReader::new(&f);
@@ -72,7 +72,7 @@ fn main() {
 
     match get_tz_file(&args, &opt_home) {
         Ok(conf_file) => {
-            match read_file(conf_file) {
+            match read_file(&conf_file) {
                 Ok(tzs) => {
 
                     // Calculate local time
@@ -82,11 +82,11 @@ fn main() {
                     let local_time_string = "Local time".to_string();
 
                     // Get names of all time-zones
-                    let tzs_strings = tzs.iter().map(|s| s.0.clone()).collect();
+                    let tzs_names = tzs.iter().map(|s| s.0.clone()).collect();
 
                     // Find the maximum length of all time-zones
                     let mx_len = cmp::max::<usize>(local_time_string.len(),
-                                                   max_len(&tzs_strings));
+                                                   max_len(&tzs_names));
 
                     // Print the local time first
                     println!("{}\t= {}",
@@ -98,10 +98,13 @@ fn main() {
                     for tz in tzs {
                         println!("{}\t= {}",
                                  pad_to_size(&tz.0, mx_len),
-                                 local_time.with_timezone(&tz.1).format(time_fmt))
+                                 local_time.with_timezone(&tz.1)
+                                           .format(time_fmt))
                     }
                 },
-                Err(why) => println!("Failed to read file: {}", why)
+                Err(why) => println!("Failed to read file {}: {}",
+                                     conf_file.to_str().unwrap(),
+                                     why)
             }
         },
         Err(why) => println!("Unable to retrieve name of config file:\n{}.", why)
@@ -128,17 +131,17 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_read_file_not_found() {
-        read_file(PathBuf::from("./test-data/non-existent.conf")).unwrap();
+        read_file(&PathBuf::from("./test-data/non-existent.conf")).unwrap();
     }
 
     #[test]
     fn test_read_file() {
         assert_eq!(
-            read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
+            read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
             "Asia/Kolkata"
         );
         assert_eq!(
-            read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
+            read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
             Kolkata
         )
     }
