@@ -56,7 +56,7 @@ pub fn max_len(strs: &Vec<String>) -> usize {
     }
 }
 
-/// Pad a string from no the right
+/// Pad a string from on the right
 pub fn pad_to_size(s: &String, desired_len: usize) -> String {
     let mut s2 = s.clone();
     while s2.len() < desired_len {
@@ -69,18 +69,32 @@ fn main() {
     let opt_home = env::home_dir();
     let args = env::args().collect::<Vec<String>>();
     let time_fmt = "%Y-%m-%d %H:%M %Z";
+
     match get_tz_file(&args, &opt_home) {
         Ok(conf_file) => {
             match read_file(conf_file) {
                 Ok(tzs) => {
+
+                    // Calculate local time
                     let local_time = Local::now();
+
+                    // The string to identify local timezone.
                     let local_time_string = "Local time".to_string();
+
+                    // Get names of all time-zones
                     let tzs_strings = tzs.iter().map(|s| s.0.clone()).collect();
+
+                    // Find the maximum length of all time-zones
                     let mx_len = cmp::max::<usize>(local_time_string.len(),
                                                    max_len(&tzs_strings));
+
+                    // Print the local time first
                     println!("{}\t= {}",
                              pad_to_size(&local_time_string, mx_len),
                              local_time.format(time_fmt));
+
+                    // Loop over the other time-zones, print their names
+                    // and the current time transformed to that zone.
                     for tz in tzs {
                         println!("{}\t= {}",
                                  pad_to_size(&tz.0, mx_len),
@@ -105,7 +119,10 @@ mod tests {
         let conf = "/tmp/test.conf".to_string();
         let prog = "prog_name".to_string();
         let args = vec![prog, conf];
-        assert_eq!(get_tz_file(&args, &None).unwrap().to_str().unwrap(), args[1])
+        assert_eq!(
+            get_tz_file(&args, &None).unwrap().to_str().unwrap(),
+            args[1]
+        )
     }
 
     #[test]
@@ -116,10 +133,14 @@ mod tests {
 
     #[test]
     fn test_read_file() {
-        assert_eq!(read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
-        "Asia/Kolkata");
-        assert_eq!(read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
-                   Kolkata)
+        assert_eq!(
+            read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
+            "Asia/Kolkata"
+        );
+        assert_eq!(
+            read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
+            Kolkata
+        )
     }
 
     #[test]
