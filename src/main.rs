@@ -1,6 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 use std::io;
+use std::cmp;
 use std::fs::File;
 use std::io::{BufReader, BufRead, Error, ErrorKind};
 
@@ -28,14 +29,14 @@ pub fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> 
 }
 
 /// Reads the config file and returns a vector of parsed timezones or an io::error.
-pub fn read_file(conf_file: PathBuf) -> Result<Vec<Tz>, io::Error> {
-    let mut tzs : Vec<Tz> = Vec::new();
+pub fn read_file(conf_file: PathBuf) -> Result<Vec<(String, Tz)>, io::Error> {
+    let mut tzs : Vec<(String, Tz)> = Vec::new();
     let f = try!(File::open(conf_file.to_str().unwrap()));
     let file_buffer = BufReader::new(&f);
     for tz_name_line in file_buffer.lines() {
         let tz_name = tz_name_line.unwrap();
         match tz_name.parse() {
-            Ok(tz) => tzs.push(tz),
+            Ok(tz) => tzs.push((tz_name, tz)),
             Err(why) =>
                 return Err(
                     Error::new(ErrorKind::InvalidData,
@@ -47,6 +48,23 @@ pub fn read_file(conf_file: PathBuf) -> Result<Vec<Tz>, io::Error> {
     Ok(tzs)
 }
 
+/// Calculate the maximum length of a vector of strings.
+pub fn max_len(strs: &Vec<String>) -> usize {
+    match strs.iter().map(|s| s.len()).max() {
+        Some(x) => x,
+        None => 0,
+    }
+}
+
+/// Pad a string from no the right
+pub fn pad_to_size(s: &String, desired_len: usize) -> String {
+    let mut s2 = s.clone();
+    while s2.len() < desired_len {
+        s2.push(' ');
+    }
+    s2
+}
+
 fn main() {
     let opt_home = env::home_dir();
     let args = env::args().collect::<Vec<String>>();
@@ -56,11 +74,17 @@ fn main() {
             match read_file(conf_file) {
                 Ok(tzs) => {
                     let local_time = Local::now();
-                    println!("Local time\t= {}", local_time.format(time_fmt));
+                    let local_time_string = "Local time".to_string();
+                    let tzs_strings = tzs.iter().map(|s| s.0.clone()).collect();
+                    let mx_len = cmp::max::<usize>(local_time_string.len(),
+                                                   max_len(&tzs_strings));
+                    println!("{}\t= {}",
+                             pad_to_size(&local_time_string, mx_len),
+                             local_time.format(time_fmt));
                     for tz in tzs {
-                        println!("{:?}\t= {}", 
-                                 tz,
-                                 local_time.with_timezone(&tz).format(time_fmt))
+                        println!("{}\t= {}",
+                                 pad_to_size(&tz.0, mx_len),
+                                 local_time.with_timezone(&tz.1).format(time_fmt))
                     }
                 },
                 Err(why) => println!("Failed to read file: {}", why)
@@ -92,7 +116,19 @@ mod tests {
 
     #[test]
     fn test_read_file() {
-        assert_eq!(read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0],
+        assert_eq!(read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
+        "Asia/Kolkata");
+        assert_eq!(read_file(PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
                    Kolkata)
+    }
+
+    #[test]
+    fn test_max_len() {
+        assert_eq!(max_len(&vec!["abc".to_string(), "xy".to_string()]), 3)
+    }
+
+    #[test]
+    fn test_max_len_empty() {
+        assert_eq!(max_len(&vec![]), 0)
     }
 }
