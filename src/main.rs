@@ -48,11 +48,6 @@ pub fn read_file(conf_file: &PathBuf) -> Result<Vec<(String, Tz)>, io::Error> {
     Ok(tzs)
 }
 
-/// Calculate the maximum length of a vector of strings.
-pub fn max_len(strs: &Vec<String>) -> usize {
-    strs.iter().map(|s| s.len()).max().unwrap_or(0)
-}
-
 /// Pad a string from on the right
 pub fn pad_to_size(s: &String, desired_len: usize) -> String {
     let mut s2 = s.clone();
@@ -78,12 +73,14 @@ fn main() {
                     // The string to identify local timezone.
                     let local_time_string = "Local time".to_string();
 
-                    // Get names of all time-zones
-                    let tzs_names = tzs.iter().map(|s| s.0.clone()).collect();
+                    // Get maximum length of all time-zones
+                    let tzs_max_len = tzs.iter().map(|s| s.0.len())
+                                         .max()
+                                         .unwrap_or(0);
 
                     // Find the maximum length of all time-zones
                     let mx_len = cmp::max::<usize>(local_time_string.len(),
-                                                   max_len(&tzs_names));
+                                                   tzs_max_len);
 
                     // Print the local time first
                     println!("{}\t= {}",
@@ -141,15 +138,5 @@ mod tests {
             read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
             Kolkata
         )
-    }
-
-    #[test]
-    fn test_max_len() {
-        assert_eq!(max_len(&vec!["abc".to_string(), "xy".to_string()]), 3)
-    }
-
-    #[test]
-    fn test_max_len_empty() {
-        assert_eq!(max_len(&vec![]), 0)
     }
 }
