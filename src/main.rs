@@ -50,10 +50,7 @@ pub fn read_file(conf_file: &PathBuf) -> Result<Vec<(String, Tz)>, io::Error> {
 
 /// Calculate the maximum length of a vector of strings.
 pub fn max_len(strs: &Vec<String>) -> usize {
-    match strs.iter().map(|s| s.len()).max() {
-        Some(x) => x,
-        None => 0,
-    }
+    strs.iter().map(|s| s.len()).max().unwrap_or(0)
 }
 
 /// Pad a string from on the right
