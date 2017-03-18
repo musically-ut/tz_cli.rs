@@ -13,36 +13,36 @@ use chrono_tz::Tz;
 
 /// The function takes arguments passed to the program and an optional path to $HOME
 /// and returns the location of the config file to read the timezones from.
-pub fn get_tz_file<'a>(args: &'a Vec<String>, opt_home: &'a Option<PathBuf>) -> Result<PathBuf, String> {
+pub fn get_tz_file<'a>(args: &'a Vec<String>,
+                       opt_home: &'a Option<PathBuf>)
+                       -> Result<PathBuf, String> {
     if args.len() > 1 {
         return Ok(PathBuf::from(&args[1]));
     } else {
         return match opt_home {
-            &Some(ref home) => {
-                let mut abs_path = home.clone();
-                abs_path.push(PathBuf::from(".tz.rc"));
-                Ok(abs_path)
-            },
-            &None => Err("No home directory!".to_string())
-        }
+                   &Some(ref home) => {
+                        let mut abs_path = home.clone();
+                        abs_path.push(PathBuf::from(".tz.rc"));
+                        Ok(abs_path)
+                   }
+                   &None => Err("No home directory!".to_string()),
+               };
     }
 }
 
 /// Reads the config file and returns a vector of parsed timezones or an io::error.
 pub fn read_file(conf_file: &PathBuf) -> Result<Vec<(String, Tz)>, io::Error> {
-    let mut tzs : Vec<(String, Tz)> = Vec::new();
+    let mut tzs: Vec<(String, Tz)> = Vec::new();
     let f = try!(File::open(conf_file.to_str().unwrap()));
     let file_buffer = BufReader::new(&f);
     for tz_name_line in file_buffer.lines() {
         let tz_name = tz_name_line.unwrap();
         match tz_name.parse() {
             Ok(tz) => tzs.push((tz_name, tz)),
-            Err(why) =>
-                return Err(
-                    Error::new(ErrorKind::InvalidData,
-                               format!("Parsing error with: {}, {}",
-                                       tz_name, why))
-                ),
+            Err(why) => {
+                return Err(Error::new(ErrorKind::InvalidData,
+                                      format!("Parsing error with: {}, {}", tz_name, why)))
+            }
         }
     }
     Ok(tzs)
@@ -74,13 +74,13 @@ fn main() {
                     let local_time_string = "Local time".to_string();
 
                     // Get maximum length of all time-zones
-                    let tzs_max_len = tzs.iter().map(|s| s.0.len())
-                                         .max()
-                                         .unwrap_or(0);
+                    let tzs_max_len = tzs.iter()
+                        .map(|s| s.0.len())
+                        .max()
+                        .unwrap_or(0);
 
                     // Find the maximum length of all time-zones
-                    let mx_len = cmp::max::<usize>(local_time_string.len(),
-                                                   tzs_max_len);
+                    let mx_len = cmp::max::<usize>(local_time_string.len(), tzs_max_len);
 
                     // Print the local time first
                     println!("{}\t= {}",
@@ -92,16 +92,17 @@ fn main() {
                     for tz in tzs {
                         println!("{}\t= {}",
                                  pad_to_size(&tz.0, mx_len),
-                                 local_time.with_timezone(&tz.1)
-                                           .format(time_fmt))
+                                 local_time.with_timezone(&tz.1).format(time_fmt))
                     }
-                },
-                Err(why) => println!("Failed to read file {}: {}",
-                                     conf_file.to_str().unwrap(),
-                                     why)
+                }
+                Err(why) => {
+                    println!("Failed to read file {}: {}",
+                             conf_file.to_str().unwrap(),
+                             why)
+                }
             }
-        },
-        Err(why) => println!("Unable to retrieve name of config file:\n{}.", why)
+        }
+        Err(why) => println!("Unable to retrieve name of config file:\n{}.", why),
     }
 }
 
@@ -116,10 +117,8 @@ mod tests {
         let conf = "/tmp/test.conf".to_string();
         let prog = "prog_name".to_string();
         let args = vec![prog, conf];
-        assert_eq!(
-            get_tz_file(&args, &None).unwrap().to_str().unwrap(),
-            args[1]
-        )
+        assert_eq!(get_tz_file(&args, &None).unwrap().to_str().unwrap(),
+                   args[1])
     }
 
     #[test]
@@ -130,13 +129,9 @@ mod tests {
 
     #[test]
     fn test_read_file() {
-        assert_eq!(
-            read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
-            "Asia/Kolkata"
-        );
-        assert_eq!(
-            read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
-            Kolkata
-        )
+        assert_eq!(read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].0,
+                   "Asia/Kolkata");
+        assert_eq!(read_file(&PathBuf::from("./test-data/test.conf")).unwrap()[0].1,
+                   Kolkata)
     }
 }
